@@ -1,0 +1,69 @@
+{
+	"name": "IGM_Load_CRO_Raw_Hist",
+	"properties": {
+		"activities": [
+			{
+				"name": "IGM_ADBS_Load_CRO_Raw_Hist",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_notebook_path",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"tableName": {
+							"value": "@pipeline().parameters.tableName",
+							"type": "Expression"
+						},
+						"tableSchema": "dbo",
+						"history": {
+							"value": "@pipeline().parameters.history",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"adbs_notebook_path": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/Load_CRO_BioAgilytix_ADA_Data_Raw_Hist"
+			},
+			"sftp_dir_name": {
+				"type": "string",
+				"defaultValue": "IGM-2323-001/BioAgilytix/ADA"
+			},
+			"tableName": {
+				"type": "string",
+				"defaultValue": "igm2323001_bioagilytix_ada"
+			},
+			"history": {
+				"type": "string",
+				"defaultValue": "yes"
+			}
+		},
+		"folder": {
+			"name": "IGM_CRO_Synapse"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-10-21T13:19:03Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

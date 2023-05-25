@@ -1,0 +1,96 @@
+{
+	"name": "IGM_AzureAD_SignIns_Auto",
+	"properties": {
+		"description": "Get Azure SignIn details and push it to sftp",
+		"activities": [
+			{
+				"name": "Azure AD SignIns",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Shared/AzureAD_Users",
+					"baseParameters": {
+						"number_of_days": "30"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notifications",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Azure AD SignIns",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "SendEmailNotifications",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"EmailTo": {
+							"value": "@pipeline().parameters.pEmailTo",
+							"type": "Expression"
+						},
+						"CC": {
+							"value": "@pipeline().parameters.pCC",
+							"type": "Expression"
+						},
+						"URL": {
+							"value": "@concat('All,<br/><br/>This is an automated notification.<br/><br/>PFB the link to the Last Signed-In Notification reported generated from Azure – AD.<br/><br/>Report Name:<br/><a href=\"',activity('Azure AD SignIns').output.runOutput,'\">','Azure Non-Temp Users','</a><br/><br/>Thanks,<br/>Raymond')",
+							"type": "Expression"
+						},
+						"Bcc": {
+							"value": "@pipeline().parameters.pBcc",
+							"type": "Expression"
+						},
+						"Subject": {
+							"value": "@pipeline().parameters.pSubject",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"pEmailTo": {
+				"type": "string",
+				"defaultValue": "IT@igmbio.com"
+			},
+			"pCC": {
+				"type": "string"
+			},
+			"pBcc": {
+				"type": "string",
+				"defaultValue": "amartis@celitotech.com;rchan@igmbio.com"
+			},
+			"pSubject": {
+				"type": "string",
+				"defaultValue": "IGM : Azure- AD User Last Signed-In Notification"
+			}
+		},
+		"folder": {
+			"name": "AD_Reports_Automation"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-11-15T13:40:46Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

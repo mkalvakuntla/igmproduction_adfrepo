@@ -1,0 +1,240 @@
+{
+	"name": "ADF_IGM8444001_DW_Load_Medpace_BirinapantPK_fact",
+	"properties": {
+		"description": "Dataflow to implement SCD Type 2 for Fact Table",
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceFact"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "InsertNewData"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "UpdateFact"
+				}
+			],
+			"transformations": [
+				{
+					"name": "deriveDateColumns"
+				},
+				{
+					"name": "selectFact"
+				},
+				{
+					"name": "filterFact"
+				},
+				{
+					"name": "lookupFact"
+				},
+				{
+					"name": "selectColumns"
+				},
+				{
+					"name": "filterNotNullBarcode"
+				},
+				{
+					"name": "UpdateDateColumns"
+				},
+				{
+					"name": "AlterRowUpdate"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          studyid as string,",
+				"          domain as string,",
+				"          subjid as string,",
+				"          pctest as string,",
+				"          visit as string,",
+				"          pctpt as string,",
+				"          pcorres as string,",
+				"          pcorresu as string,",
+				"          pcspec as string,",
+				"          pcmethod as string,",
+				"          pclloq as string,",
+				"          comment as string,",
+				"          pcnam as string,",
+				"          file_name as string,",
+				"          load_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceRaw",
+				"source(output(",
+				"          studyid as string,",
+				"          domain as string,",
+				"          subjid as string,",
+				"          pctest as string,",
+				"          visit as string,",
+				"          pctpt as string,",
+				"          pcorres as string,",
+				"          pcorresu as string,",
+				"          pcspec as string,",
+				"          pcmethod as string,",
+				"          pclloq as string,",
+				"          comment as string,",
+				"          pcnam as string,",
+				"          file_name as string,",
+				"          eff_start_date as timestamp,",
+				"          eff_end_date as timestamp,",
+				"          created_date as timestamp,",
+				"          last_updated_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceFact",
+				"sourceRaw derive(eff_start_date = currentUTC('PST'),",
+				"          eff_end_date = toDate('9999-12-31'),",
+				"          created_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> deriveDateColumns",
+				"sourceFact select(mapColumn(",
+				"          studyid,",
+				"          domain,",
+				"          subjid,",
+				"          pctest,",
+				"          visit,",
+				"          pctpt,",
+				"          pcorres,",
+				"          pcorresu,",
+				"          pcspec,",
+				"          pcmethod,",
+				"          pclloq,",
+				"          comment,",
+				"          pcnam,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          tgteff_end_date = eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectFact",
+				"selectFact filter(toString(toDate(tgteff_end_date))=='9999-12-31') ~> filterFact",
+				"sourceRaw, filterFact lookup(sourceRaw@subjid == selectFact@subjid",
+				"     && sourceRaw@visit == selectFact@visit",
+				"     && sourceRaw@pctpt == selectFact@pctpt,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupFact",
+				"filterNotNullBarcode select(mapColumn(",
+				"          studyid = selectFact@studyid,",
+				"          domain = selectFact@domain,",
+				"          subjid = selectFact@subjid,",
+				"          pctest = selectFact@pctest,",
+				"          visit = selectFact@visit,",
+				"          pctpt = selectFact@pctpt,",
+				"          pcorres = selectFact@pcorres,",
+				"          pcorresu = selectFact@pcorresu,",
+				"          pcspec = selectFact@pcspec,",
+				"          pcmethod = selectFact@pcmethod,",
+				"          pclloq = selectFact@pclloq,",
+				"          comment = selectFact@comment,",
+				"          pcnam = selectFact@pcnam,",
+				"          file_name = selectFact@file_name,",
+				"          eff_start_date,",
+				"          created_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"lookupFact filter(and(and(!isNull(selectFact@subjid), !isNull(selectFact@pctpt)),!isNull(selectFact@visit))) ~> filterNotNullBarcode",
+				"selectColumns derive(eff_end_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> UpdateDateColumns",
+				"UpdateDateColumns alterRow(updateIf(true())) ~> AlterRowUpdate",
+				"deriveDateColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          studyid,",
+				"          domain,",
+				"          subjid,",
+				"          pctest,",
+				"          visit,",
+				"          pctpt,",
+				"          pcorres,",
+				"          pcorresu,",
+				"          pcspec,",
+				"          pcmethod,",
+				"          pclloq,",
+				"          comment,",
+				"          pcnam,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     )) ~> InsertNewData",
+				"AlterRowUpdate sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['subjid','pctpt','visit'],",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          studyid,",
+				"          domain,",
+				"          subjid,",
+				"          pctest,",
+				"          visit,",
+				"          pctpt,",
+				"          pcorres,",
+				"          pcorresu,",
+				"          pcspec,",
+				"          pcmethod,",
+				"          pclloq,",
+				"          comment,",
+				"          pcnam,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          created_date,",
+				"          eff_end_date,",
+				"          last_updated_date",
+				"     )) ~> UpdateFact"
+			]
+		}
+	}
+}

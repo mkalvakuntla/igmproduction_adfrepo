@@ -1,0 +1,100 @@
+{
+	"name": "IGM_ADBS_CRO_SFTP_File_Validation",
+	"properties": {
+		"activities": [
+			{
+				"name": "ADBS_CRO_SFTP",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_cro_sftp",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "ADBS_CRO_File_Validation",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "ADBS_CRO_SFTP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_file_validation",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"raw_table_name": {
+							"value": "@pipeline().parameters.raw_table_name",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"adbs_cro_sftp": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/CRO_SFTP_DBFS"
+			},
+			"sftp_dir_name": {
+				"type": "string",
+				"defaultValue": "IGM-2323-001/BioAgilytix/ADA"
+			},
+			"adbs_file_validation": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/CRO_File_Validation"
+			},
+			"raw_table_name": {
+				"type": "string",
+				"defaultValue": "igm2323001_bioagilytix_ada_raw"
+			}
+		},
+		"folder": {
+			"name": "IGM_CRO_Synapse"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-10-21T13:19:03Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

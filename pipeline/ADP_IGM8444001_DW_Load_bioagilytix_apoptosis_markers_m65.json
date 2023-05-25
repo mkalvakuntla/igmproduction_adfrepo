@@ -1,0 +1,563 @@
+{
+	"name": "ADP_IGM8444001_DW_Load_bioagilytix_apoptosis_markers_m65",
+	"properties": {
+		"activities": [
+			{
+				"name": "DF_BioAgilytix_M65",
+				"description": "Call Dataflow to update Fact Table",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "ADBS_Load_Raw_Hist",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "ADF_IGM8444001_DW_Load_bioagilytix_apoptosis_markers_m65_fact",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"sourceRaw": {
+								"tableName": {
+									"value": "@pipeline().parameters.srcTableName",
+									"type": "Expression"
+								}
+							},
+							"sourceFact": {
+								"tableName": {
+									"value": "@pipeline().parameters.tgtTableName",
+									"type": "Expression"
+								}
+							},
+							"InsertNewData": {
+								"tableName": {
+									"value": "@pipeline().parameters.tgtTableName",
+									"type": "Expression"
+								}
+							},
+							"UpdateFact": {
+								"tableName": {
+									"value": "@pipeline().parameters.tgtTableName",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"staging": {
+						"linkedService": {
+							"referenceName": "LS_Staging_Storage",
+							"type": "LinkedServiceReference"
+						},
+						"folderPath": "igmsynapsefilesysprod/Staging"
+					},
+					"integrationRuntime": {
+						"referenceName": "IGMCROSynapseIR",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "ADBS_Load_Raw_Hist",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "ADBS_CRO_SFTP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_load_raw_hist",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"tableSchema": "dbo",
+						"tableName": {
+							"value": "@replace(pipeline().parameters.srcTableName,'_raw','')",
+							"type": "Expression"
+						},
+						"history": {
+							"value": "@pipeline().parameters.history",
+							"type": "Expression"
+						},
+						"sheet_name": {
+							"value": "@pipeline().parameters.sheet_name",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set CRO SFTP Error Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ADBS_CRO_SFTP",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": {
+						"value": "@concat('<br>Error Details: ',activity('ADBS_CRO_SFTP').output.runError,'<br>Notebook URL:',activity('ADBS_CRO_SFTP').output.runPageUrl)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Load Raw Hist Error Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ADBS_Load_Raw_Hist",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": {
+						"value": "@concat('<br>Error Details: ',activity('ADBS_Load_Raw_Hist').output.runError,'<br>Notebook URL:',activity('ADBS_Load_Raw_Hist').output.runPageUrl)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ADBS_CRO_SFTP",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_cro_sftp",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"filename": {
+							"value": "@pipeline().parameters.sftp_filename",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification SFTP",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set CRO SFTP Error Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification Raw Hist",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Load Raw Hist Error Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification Raw Hist_copy1",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Fact Validation Success",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification Raw Hist_copy2",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Dataflow Failure",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set Dataflow Success",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "DF_BioAgilytix_M65",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": "Success"
+				}
+			},
+			{
+				"name": "Set Dataflow Failure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "DF_BioAgilytix_M65",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": "Failed"
+				}
+			},
+			{
+				"name": "Fact Validation",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Dataflow Success",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_fact_validation",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"uniqueKey": {
+							"value": "@pipeline().parameters.uniqueKey",
+							"type": "Expression"
+						},
+						"tgtTableName": {
+							"value": "@pipeline().parameters.tgtTableName",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set Fact Validation Success",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Fact Validation",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": "Success"
+				}
+			},
+			{
+				"name": "Set Fact Validation Failure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Fact Validation",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": "Failure"
+				}
+			},
+			{
+				"name": "Send Email Notification Raw Hist_copy1_copy1",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Fact Validation Failure",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"srcTableName": {
+				"type": "string",
+				"defaultValue": "igm8444001_bioagilytix_apoptosis_markers_m65_raw"
+			},
+			"tgtTableName": {
+				"type": "string",
+				"defaultValue": "igm8444001_bioagilytix_apoptosis_markers_m65_fact"
+			},
+			"sftp_dir_name": {
+				"type": "string",
+				"defaultValue": "IGM-8444-001/BioAgilytix/Apoptosis_Markers/M65"
+			},
+			"adbs_cro_sftp": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/ADBS_IGM_CRO_SFTP_DBFS"
+			},
+			"adbs_file_validation": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/ADBS_IGM_CRO_File_Validation"
+			},
+			"adbs_load_raw_hist": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/ADBS_Load_CRO_8444_001_BioAgilytix_apoptosis_markers_m65_Raw_Hist"
+			},
+			"history": {
+				"type": "string",
+				"defaultValue": "yes"
+			},
+			"adbs_send_mail": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/SendEmail"
+			},
+			"sftp_filename": {
+				"type": "string",
+				"defaultValue": "BAL-20-734-034_M65Biomarker_IGM8444_Sponsor"
+			},
+			"uniqueKey": {
+				"type": "string",
+				"defaultValue": "sample_id"
+			},
+			"adbs_fact_validation": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/ADBS_IGM_CRO_Fact_Validation"
+			},
+			"sheet_name": {
+				"type": "string",
+				"defaultValue": "Samples Final "
+			}
+		},
+		"variables": {
+			"run_details": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "IGM_CRO_Synapse"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-11-15T13:55:36Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

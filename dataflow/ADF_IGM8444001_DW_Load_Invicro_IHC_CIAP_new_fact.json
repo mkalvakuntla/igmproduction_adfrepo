@@ -1,0 +1,235 @@
+{
+	"name": "ADF_IGM8444001_DW_Load_Invicro_IHC_CIAP_new_fact",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceFact"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceRaw"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "UpdateFact"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "InsertNewData"
+				}
+			],
+			"transformations": [
+				{
+					"name": "selectFact"
+				},
+				{
+					"name": "filterFact"
+				},
+				{
+					"name": "lookupFact"
+				},
+				{
+					"name": "selectColumns"
+				},
+				{
+					"name": "UpdateDateColumns"
+				},
+				{
+					"name": "AlterRowUpdate"
+				},
+				{
+					"name": "filterNotNullCovaAccNo"
+				},
+				{
+					"name": "deriveDateColumns"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          study_name as string,",
+				"          patient_id as string,",
+				"          specimen_id as string,",
+				"          he_tumor as string,",
+				"          he_necrotic_area as string,",
+				"          cytoplasmic_ciap_none as string,",
+				"          cytoplasmic_ciap_low as string,",
+				"          cytoplasmic_ciap_high as string,",
+				"          nuclear_ciap_none as string,",
+				"          nuclear_ciap_low as string,",
+				"          nuclear_ciap_high as string,",
+				"          comments as string,",
+				"          file_name as string,",
+				"          eff_start_date as timestamp,",
+				"          eff_end_date as timestamp,",
+				"          created_date as timestamp,",
+				"          last_updated_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceFact",
+				"source(output(",
+				"          patient_id as string,",
+				"          specimen_id as string,",
+				"          he_tumor as string,",
+				"          he_necrotic_area as string,",
+				"          cytoplasmic_ciap_none as string,",
+				"          cytoplasmic_ciap_low as string,",
+				"          cytoplasmic_ciap_high as string,",
+				"          nuclear_ciap_none as string,",
+				"          nuclear_ciap_low as string,",
+				"          nuclear_ciap_high as string,",
+				"          comments as string,",
+				"          study_name as string,",
+				"          file_name as string,",
+				"          load_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceRaw",
+				"sourceFact select(mapColumn(",
+				"          study_name,",
+				"          patient_id,",
+				"          specimen_id,",
+				"          he_tumor,",
+				"          he_necrotic_area,",
+				"          cytoplasmic_ciap_none,",
+				"          cytoplasmic_ciap_low,",
+				"          cytoplasmic_ciap_high,",
+				"          nuclear_ciap_none,",
+				"          nuclear_ciap_low,",
+				"          nuclear_ciap_high,",
+				"          comments,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          tgteff_end_date = eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectFact",
+				"selectFact filter(toString(toDate(tgteff_end_date))=='9999-12-31') ~> filterFact",
+				"sourceRaw, filterFact lookup(sourceRaw@patient_id == selectFact@patient_id",
+				"     && sourceRaw@specimen_id == selectFact@specimen_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupFact",
+				"filterNotNullCovaAccNo select(mapColumn(",
+				"          study_name = selectFact@study_name,",
+				"          patient_id = selectFact@patient_id,",
+				"          specimen_id = selectFact@specimen_id,",
+				"          he_tumor = selectFact@he_tumor,",
+				"          he_necrotic_area = selectFact@he_necrotic_area,",
+				"          cytoplasmic_ciap_none = selectFact@cytoplasmic_ciap_none,",
+				"          cytoplasmic_ciap_low = selectFact@cytoplasmic_ciap_low,",
+				"          cytoplasmic_ciap_high = selectFact@cytoplasmic_ciap_high,",
+				"          nuclear_ciap_none = selectFact@nuclear_ciap_none,",
+				"          nuclear_ciap_low = selectFact@nuclear_ciap_low,",
+				"          nuclear_ciap_high = selectFact@nuclear_ciap_high,",
+				"          comments = selectFact@comments,",
+				"          file_name = selectFact@file_name,",
+				"          eff_start_date,",
+				"          eff_end_date = tgteff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"selectColumns derive(eff_end_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> UpdateDateColumns",
+				"UpdateDateColumns alterRow(updateIf(true())) ~> AlterRowUpdate",
+				"lookupFact filter((!isNull(selectFact@patient_id)) && (!isNull(selectFact@specimen_id))) ~> filterNotNullCovaAccNo",
+				"sourceRaw derive(eff_start_date = currentUTC('PST'),",
+				"          eff_end_date = toDate('9999-12-31'),",
+				"          created_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> deriveDateColumns",
+				"AlterRowUpdate sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['patient_id','specimen_id'],",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          study_name,",
+				"          patient_id,",
+				"          specimen_id,",
+				"          he_tumor,",
+				"          he_necrotic_area,",
+				"          cytoplasmic_ciap_none,",
+				"          cytoplasmic_ciap_low,",
+				"          cytoplasmic_ciap_high,",
+				"          nuclear_ciap_none,",
+				"          nuclear_ciap_low,",
+				"          nuclear_ciap_high,",
+				"          comments,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     )) ~> UpdateFact",
+				"deriveDateColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          patient_id,",
+				"          specimen_id,",
+				"          he_tumor,",
+				"          he_necrotic_area,",
+				"          cytoplasmic_ciap_none,",
+				"          cytoplasmic_ciap_low,",
+				"          cytoplasmic_ciap_high,",
+				"          nuclear_ciap_none,",
+				"          nuclear_ciap_low,",
+				"          nuclear_ciap_high,",
+				"          comments,",
+				"          study_name,",
+				"          file_name,",
+				"          load_date,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     )) ~> InsertNewData"
+			]
+		}
+	}
+}

@@ -1,0 +1,33 @@
+{
+	"name": "S_TempUsers_00_10_AM",
+	"properties": {
+		"description": "Trigger temp users at 00:10 AM PT",
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "IGM_DW_ADBS_Start_Cluster",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-12-24T13:03:00",
+				"timeZone": "Pacific Standard Time",
+				"schedule": {
+					"minutes": [
+						10
+					],
+					"hours": [
+						0
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,90 @@
+{
+	"name": "SFTP_FileStatuscheck_Daily",
+	"properties": {
+		"activities": [
+			{
+				"name": "SFTP File Check",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Shared/Check_for_new_files_in_sftp_server"
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notifications",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "SFTP File Check",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "SendEmailNotifications",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"EmailTo": {
+							"value": "@pipeline().parameters.pEmailTo",
+							"type": "Expression"
+						},
+						"CC": {
+							"value": "@pipeline().parameters.pCC",
+							"type": "Expression"
+						},
+						"URL": {
+							"value": "@concat('<html><head>Hi All,</head><body><br>This is an automated email<br>PFB the list of files in Inbound and list of empty directory paths:<br>',activity('SFTP File Check').output.runoutput,'<p>Thanks,<br>IGMBio Support Team<p></body></html>')",
+							"type": "Expression"
+						},
+						"Bcc": {
+							"value": "@pipeline().parameters.pBcc",
+							"type": "Expression"
+						},
+						"Subject": {
+							"value": "@pipeline().parameters.pSubject",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"pEmailTo": {
+				"type": "string",
+				"defaultValue": "mkalvakuntla@igmbio.com;sbarhate@igmbio.com"
+			},
+			"pCC": {
+				"type": "string",
+				"defaultValue": "uparab@igmbio.com"
+			},
+			"pBcc": {
+				"type": "string",
+				"defaultValue": "mkalvakuntla@igmbio.com"
+			},
+			"pSubject": {
+				"type": "string",
+				"defaultValue": "IGM : SFTP file status check"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-05-15T06:18:23Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

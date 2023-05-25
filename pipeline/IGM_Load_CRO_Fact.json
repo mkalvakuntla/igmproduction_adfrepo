@@ -1,0 +1,81 @@
+{
+	"name": "IGM_Load_CRO_Fact",
+	"properties": {
+		"activities": [
+			{
+				"name": "DF_Load_CRO_Fact",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "1.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "ADF_IGM2323001_DW_Load_bioagilytix_ada_fact",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"sourceRaw": {
+								"tableName": {
+									"value": "@pipeline().parameters.srcTableName",
+									"type": "Expression"
+								}
+							},
+							"sourceFact": {
+								"tableName": {
+									"value": "@pipeline().parameters.tgtTableName",
+									"type": "Expression"
+								}
+							},
+							"InsertNewData": {
+								"tableName": {
+									"value": "@pipeline().parameters.tgtTableName",
+									"type": "Expression"
+								}
+							},
+							"UpdateFact": {
+								"tableName": {
+									"value": "@pipeline().parameters.tgtTableName",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"staging": {
+						"linkedService": {
+							"referenceName": "LS_Staging_Storage",
+							"type": "LinkedServiceReference"
+						},
+						"folderPath": "igmsynapsefilesysprod/Staging"
+					},
+					"integrationRuntime": {
+						"referenceName": "IGMCROSynapseIR",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine",
+					"sourceStagingConcurrency": 1
+				}
+			}
+		],
+		"parameters": {
+			"srcTableName": {
+				"type": "string",
+				"defaultValue": "igm2323001_bioagilytix_ada_raw"
+			},
+			"tgtTableName": {
+				"type": "string",
+				"defaultValue": "igm2323001_bioagilytix_ada_fact"
+			}
+		},
+		"folder": {
+			"name": "IGM_CRO_Synapse"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-11-15T13:55:35Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

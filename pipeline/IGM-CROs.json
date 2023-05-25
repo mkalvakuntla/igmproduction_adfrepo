@@ -1,0 +1,50 @@
+{
+	"name": "IGM-CROs",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy_File_SFTP_To_DBFS",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@variables('v_Notebook_Copy_File_SFTP_To_DBFS')",
+						"type": "Expression"
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"p_source_sftp_dir": {
+				"type": "string"
+			},
+			"p_source_file_name": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"v_Notebook_Copy_File_SFTP_To_DBFS": {
+				"type": "String",
+				"defaultValue": "/Templates/IGM_CRO_Copy_File_SFTP_To_DBFS"
+			}
+		},
+		"folder": {
+			"name": "CRO/IGM-2644-001"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-05-23T11:52:59Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

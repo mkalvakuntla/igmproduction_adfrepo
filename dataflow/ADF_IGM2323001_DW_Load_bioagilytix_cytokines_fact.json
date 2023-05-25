@@ -1,0 +1,230 @@
+{
+	"name": "ADF_IGM2323001_DW_Load_bioagilytix_cytokines_fact",
+	"properties": {
+		"description": "Dataflow to implement SCD Type 2 for BioAgilytix Cytokines Fact Table",
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceFact"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "InsertNewData"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "UpdateFact"
+				}
+			],
+			"transformations": [
+				{
+					"name": "deriveDateColumns"
+				},
+				{
+					"name": "selectFact"
+				},
+				{
+					"name": "filterFact"
+				},
+				{
+					"name": "lookupFact"
+				},
+				{
+					"name": "selectColumns"
+				},
+				{
+					"name": "filterNotNullAccessionNumber"
+				},
+				{
+					"name": "UpdateDateColumns"
+				},
+				{
+					"name": "AlterRowUpdate"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          studyname as string,",
+				"          accession_number as string,",
+				"          subject as long,",
+				"          visit_name as string,",
+				"          plate_number as long,",
+				"          assay_date as string,",
+				"          analyte as string,",
+				"          lloq_pg_ml as double,",
+				"          uloq_pg_ml as double,",
+				"          concentration_pg_ml as string,",
+				"          comments as string,",
+				"          file_name as string,",
+				"          load_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceRaw",
+				"source(output(",
+				"          studyname as string,",
+				"          accession_number as string,",
+				"          subject as long,",
+				"          visit_name as string,",
+				"          plate_number as long,",
+				"          assay_date as date,",
+				"          analyte as string,",
+				"          lloq_pg_ml as double,",
+				"          uloq_pg_ml as double,",
+				"          concentration_pg_ml as string,",
+				"          comments as string,",
+				"          file_name as string,",
+				"          load_date as timestamp,",
+				"          eff_start_date as timestamp,",
+				"          eff_end_date as timestamp,",
+				"          created_date as timestamp,",
+				"          last_updated_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceFact",
+				"sourceRaw derive(EffStartDate = currentUTC('PST'),",
+				"          EffEndDate = toDate('9999-12-31'),",
+				"          CreatedDate = currentUTC('PST'),",
+				"          LastUpdatedDate = currentUTC('PST'),",
+				"          new_assay_date = toDate(assay_date, 'yyyy-MM-dd')) ~> deriveDateColumns",
+				"sourceFact select(mapColumn(",
+				"          studyname,",
+				"          tgtaccession_number = accession_number,",
+				"          subject,",
+				"          visit_name,",
+				"          plate_number,",
+				"          assay_date,",
+				"          analyte,",
+				"          lloq_pg_ml,",
+				"          uloq_pg_ml,",
+				"          concentration_pg_ml,",
+				"          comments,",
+				"          file_name,",
+				"          load_date,",
+				"          eff_start_date,",
+				"          tgteff_end_date = eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectFact",
+				"selectFact filter(toString(toDate(tgteff_end_date))=='9999-12-31') ~> filterFact",
+				"sourceRaw, filterFact lookup(accession_number == tgtaccession_number,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupFact",
+				"filterNotNullAccessionNumber select(mapColumn(",
+				"          studyname = selectFact@studyname,",
+				"          accession_number = tgtaccession_number,",
+				"          subject = selectFact@subject,",
+				"          visit_name = selectFact@visit_name,",
+				"          plate_number = selectFact@plate_number,",
+				"          assay_date = selectFact@assay_date,",
+				"          analyte = selectFact@analyte,",
+				"          lloq_pg_ml = selectFact@lloq_pg_ml,",
+				"          uloq_pg_ml = selectFact@uloq_pg_ml,",
+				"          concentration_pg_ml = selectFact@concentration_pg_ml,",
+				"          comments = selectFact@comments,",
+				"          file_name = selectFact@file_name,",
+				"          load_date = selectFact@load_date,",
+				"          eff_start_date,",
+				"          created_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"lookupFact filter(!isNull(tgtaccession_number)) ~> filterNotNullAccessionNumber",
+				"selectColumns derive(eff_end_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> UpdateDateColumns",
+				"UpdateDateColumns alterRow(updateIf(true())) ~> AlterRowUpdate",
+				"deriveDateColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          studyname,",
+				"          accession_number,",
+				"          subject,",
+				"          visit_name,",
+				"          plate_number,",
+				"          assay_date = new_assay_date,",
+				"          analyte,",
+				"          lloq_pg_ml,",
+				"          uloq_pg_ml,",
+				"          concentration_pg_ml,",
+				"          comments,",
+				"          file_name,",
+				"          eff_start_date = EffStartDate,",
+				"          eff_end_date = EffEndDate,",
+				"          created_date = CreatedDate,",
+				"          last_updated_date = LastUpdatedDate",
+				"     )) ~> InsertNewData",
+				"AlterRowUpdate sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['accession_number'],",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          studyname,",
+				"          accession_number,",
+				"          subject,",
+				"          visit_name,",
+				"          plate_number,",
+				"          assay_date,",
+				"          analyte,",
+				"          lloq_pg_ml,",
+				"          uloq_pg_ml,",
+				"          concentration_pg_ml,",
+				"          comments,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          created_date,",
+				"          eff_end_date,",
+				"          last_updated_date",
+				"     )) ~> UpdateFact"
+			]
+		}
+	}
+}

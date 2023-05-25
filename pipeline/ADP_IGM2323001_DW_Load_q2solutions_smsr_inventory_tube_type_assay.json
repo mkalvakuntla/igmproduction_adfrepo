@@ -1,0 +1,311 @@
+{
+	"name": "ADP_IGM2323001_DW_Load_q2solutions_smsr_inventory_tube_type_assay",
+	"properties": {
+		"activities": [
+			{
+				"name": "ADBS_Load_Raw_Hist",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "ADBS_CRO_SFTP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_load_raw_hist",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"tableSchema": "dbo",
+						"tableName": {
+							"value": "@replace(pipeline().parameters.srcTableName,'_raw','')",
+							"type": "Expression"
+						},
+						"history": {
+							"value": "@pipeline().parameters.history",
+							"type": "Expression"
+						},
+						"sheet_name": {
+							"value": "@pipeline().parameters.sheet_name",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set CRO SFTP Error Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ADBS_CRO_SFTP",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": {
+						"value": "@concat('<br>Error Details: ',activity('ADBS_CRO_SFTP').output.runError,'<br>Notebook URL:',activity('ADBS_CRO_SFTP').output.runPageUrl)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Load Raw Hist Error Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ADBS_Load_Raw_Hist",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": {
+						"value": "@concat('<br>Error Details: ',activity('ADBS_Load_Raw_Hist').output.runError,'<br>Notebook URL:',activity('ADBS_Load_Raw_Hist').output.runPageUrl)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ADBS_CRO_SFTP",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_cro_sftp",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"filename": {
+							"value": "@pipeline().parameters.sftp_filename",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification SFTP",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set CRO SFTP Error Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification Raw Hist",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Load Raw Hist Error Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification Raw Hist_copy1",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Success",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set Success",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ADBS_Load_Raw_Hist",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": "Success"
+				}
+			}
+		],
+		"parameters": {
+			"srcTableName": {
+				"type": "string",
+				"defaultValue": "igm2323001_q2solutions_smsr_tube_type_assay_raw"
+			},
+			"sftp_dir_name": {
+				"type": "string",
+				"defaultValue": "IGM-2323-001/Q2_Solutions/SMSR_(Inventory)"
+			},
+			"adbs_cro_sftp": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/ADBS_IGM_CRO_SFTP_DBFS"
+			},
+			"adbs_load_raw_hist": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/ADBS_Load_CRO_Q2Solutions_SMSR_Inventory_tube_type_assay"
+			},
+			"history": {
+				"type": "string",
+				"defaultValue": "no"
+			},
+			"adbs_send_mail": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/SendEmail"
+			},
+			"sftp_filename": {
+				"type": "string",
+				"defaultValue": "IGM-2323-001_Q² Solutions_Global SMSR with ADT Result for CXDX Report"
+			},
+			"sheet_name": {
+				"type": "string",
+				"defaultValue": "Tube Type_Assay"
+			}
+		},
+		"variables": {
+			"run_details": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "IGM_CRO_Synapse"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-10-21T13:19:03Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

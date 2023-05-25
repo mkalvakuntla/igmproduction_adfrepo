@@ -1,0 +1,9 @@
+{
+	"name": "IGMADF",
+	"location": "westus3",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "1c977921-4a5c-412c-8389-5fdf820e4fdf",
+		"tenantId": "b094cfa8-01bf-4d22-af17-e5a1180090c5"
+	}
+}

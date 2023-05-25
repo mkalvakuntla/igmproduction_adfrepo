@@ -1,0 +1,98 @@
+{
+	"name": "trigger-IGM-8444-001-Dataload",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_bioagilytix_ada",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_bioagilytix_apoptosis_markers_cas3_samplefinal",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_bioagilytix_apoptosis_markers_cas3_samplefinal_cleaved",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_bioagilytix_apoptosis_markers_m30",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_bioagilytix_apoptosis_markers_m65",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_bioagilytix_cytokine",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_bioagilytix_pk",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_Invicro_IHC",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_labcorp_lablink_report",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_Medpace_BirinapantPK",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_q2_smsr_inventory",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM8444001_DW_Load_q2_solutions_flow_data_infosario",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2023-03-20T01:23:00",
+				"timeZone": "Pacific Standard Time",
+				"schedule": {
+					"minutes": [
+						0
+					],
+					"hours": [
+						1
+					]
+				}
+			}
+		}
+	}
+}

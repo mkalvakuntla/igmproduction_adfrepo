@@ -1,0 +1,152 @@
+{
+	"name": "trigger-IGM-2323-001-Dataload",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Started",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_bioagilytix_ada_BAL_20734014",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_bioagilytix_cytokines_BAL_19734006_DataTransfer",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_bioagilytix_pk_BAL_20734013_SAData",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_canopy_ihc_pathreview_IGM_ISO2171",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_exsera_complement",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_foresight_mrd_phased",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_foresight_mrd_snv_genotype",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_medidata_ch",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_medidata_cm",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_medidata_cmas",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_medidata_crp",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_medidata_dm",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_medidata_ex",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_medidata_hm",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_medidata_ltl",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_medidata_tbnk",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_Medidata_exin",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_myriad_cytokines_126569_results",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_q2solutions_flow_data_infosario",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_q2solutions_smsr_inventory",
+					"type": "PipelineReference"
+				}
+			},
+			{
+				"pipelineReference": {
+					"referenceName": "ADP_IGM2323001_DW_Load_qps_rituximab_pk",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2023-03-20T04:21:00",
+				"timeZone": "Pacific Standard Time",
+				"schedule": {
+					"minutes": [
+						30
+					],
+					"hours": [
+						0
+					]
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,87 @@
+{
+	"name": "IGM_DW_Load_ADA_RAW_SQL_Pool_copy1",
+	"properties": {
+		"description": "load ada data to mysql raw and hist table",
+		"activities": [
+			{
+				"name": "Load_CRO_Table",
+				"description": "Load_CRO_Table",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Users/amartis-a@igmbio.com/Load_CRO_Data_Synapse_SQL_Pool",
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"tableName": {
+							"value": "@pipeline().parameters.tableName",
+							"type": "Expression"
+						},
+						"tableSchema": {
+							"value": "@pipeline().parameters.tableSchema",
+							"type": "Expression"
+						},
+						"history": {
+							"value": "@pipeline().parameters.history",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"sftp_dir_name": {
+				"type": "string",
+				"defaultValue": "IGM-2323-001/BioAgilytix/ADA"
+			},
+			"tableName": {
+				"type": "string",
+				"defaultValue": "bioagilytix_ada_raw"
+			},
+			"tableSchema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"history": {
+				"type": "string",
+				"defaultValue": "yes"
+			},
+			"pEmailTo": {
+				"type": "string",
+				"defaultValue": "rchan@igmbio.com"
+			},
+			"pCC": {
+				"type": "string",
+				"defaultValue": "rchan@igmbio.com"
+			},
+			"pBcc": {
+				"type": "string",
+				"defaultValue": "rchan@igmbio.com"
+			},
+			"pSubject": {
+				"type": "string",
+				"defaultValue": "CRO- ADA Run Details"
+			}
+		},
+		"folder": {
+			"name": "CRO_Data_To_Synapse_SQL_Pool"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-05-17T13:06:34Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

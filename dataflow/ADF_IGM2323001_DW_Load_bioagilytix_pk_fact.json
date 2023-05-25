@@ -1,0 +1,242 @@
+{
+	"name": "ADF_IGM2323001_DW_Load_bioagilytix_pk_fact",
+	"properties": {
+		"description": "Dataflow to implement SCD Type 2 for BioAgilytix PK Fact Table",
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceFact"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "InsertNewData"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "UpdateFact"
+				}
+			],
+			"transformations": [
+				{
+					"name": "deriveDateColumns"
+				},
+				{
+					"name": "selectFact"
+				},
+				{
+					"name": "filterFact"
+				},
+				{
+					"name": "lookupFact"
+				},
+				{
+					"name": "selectColumns"
+				},
+				{
+					"name": "filterNotNullCustomID"
+				},
+				{
+					"name": "UpdateDateColumns"
+				},
+				{
+					"name": "AlterRowUpdate"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          study_name as string,",
+				"          subject as string,",
+				"          custom_id as string,",
+				"          Day_Nominal as string,",
+				"          Hour_Nominal as string,",
+				"          Minute_Nominal as string,",
+				"          run_id as string,",
+				"          dilution_factor as string,",
+				"          visit as string,",
+				"          actual_sampling_date as string,",
+				"          actual_sampling_time as string,",
+				"          concentration_ng_ml as string,",
+				"          file_name as string,",
+				"          load_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceRaw",
+				"source(output(",
+				"          study_name as string,",
+				"          subject as string,",
+				"          custom_id as string,",
+				"          Day_Nominal as double,",
+				"          Hour_Nominal as double,",
+				"          Minute_Nominal as double,",
+				"          run_id as string,",
+				"          dilution_factor as long,",
+				"          visit as string,",
+				"          actual_sampling_date as date,",
+				"          actual_sampling_time as string,",
+				"          actual_sampling_datetime as timestamp,",
+				"          concentration_ng_ml as string,",
+				"          file_name as string,",
+				"          eff_start_date as timestamp,",
+				"          eff_end_date as timestamp,",
+				"          created_date as timestamp,",
+				"          last_updated_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceFact",
+				"sourceRaw derive(EffStartDate = currentUTC('PST'),",
+				"          EffEndDate = toDate('9999-12-31'),",
+				"          CreatedDate = currentUTC('PST'),",
+				"          LastUpdatedDate = currentUTC('PST'),",
+				"          new_actual_sampling_date = toDate(actual_sampling_date, 'dd-MMM-yyyy'),",
+				"          actual_sampling_datetime = toTimestamp(actual_sampling_date+' '+actual_sampling_time,'dd-MMM-yyyy HH:mm:ss')) ~> deriveDateColumns",
+				"sourceFact select(mapColumn(",
+				"          study_name,",
+				"          subject,",
+				"          custom_id,",
+				"          run_id,",
+				"          dilution_factor,",
+				"          visit,",
+				"          actual_sampling_date,",
+				"          actual_sampling_time,",
+				"          actual_sampling_datetime,",
+				"          concentration_ng_ml,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          tgteff_end_date = eff_end_date,",
+				"          created_date,",
+				"          last_updated_date,",
+				"          Day_Nominal,",
+				"          Hour_Nominal,",
+				"          Minute_Nominal",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectFact",
+				"selectFact filter(toString(toDate(tgteff_end_date))=='9999-12-31') ~> filterFact",
+				"sourceRaw, filterFact lookup(sourceRaw@custom_id == selectFact@custom_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupFact",
+				"filterNotNullCustomID select(mapColumn(",
+				"          study_name = selectFact@study_name,",
+				"          subject = selectFact@subject,",
+				"          custom_id = selectFact@custom_id,",
+				"          run_id = selectFact@run_id,",
+				"          dilution_factor = selectFact@dilution_factor,",
+				"          visit = selectFact@visit,",
+				"          actual_sampling_date = selectFact@actual_sampling_date,",
+				"          actual_sampling_time = selectFact@actual_sampling_time,",
+				"          actual_sampling_datetime,",
+				"          concentration_ng_ml = selectFact@concentration_ng_ml,",
+				"          file_name = selectFact@file_name,",
+				"          eff_start_date,",
+				"          eff_end_date = tgteff_end_date,",
+				"          created_date,",
+				"          last_updated_date,",
+				"          Day_Nominal = selectFact@Day_Nominal,",
+				"          Hour_Nominal = selectFact@Hour_Nominal,",
+				"          Minute_Nominal = selectFact@Minute_Nominal",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"lookupFact filter(!isNull(selectFact@custom_id)) ~> filterNotNullCustomID",
+				"selectColumns derive(eff_end_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> UpdateDateColumns",
+				"UpdateDateColumns alterRow(updateIf(true())) ~> AlterRowUpdate",
+				"deriveDateColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          study_name,",
+				"          subject,",
+				"          custom_id,",
+				"          run_id,",
+				"          dilution_factor,",
+				"          visit,",
+				"          actual_sampling_date = new_actual_sampling_date,",
+				"          actual_sampling_time,",
+				"          concentration_ng_ml,",
+				"          file_name,",
+				"          load_date,",
+				"          eff_start_date = EffStartDate,",
+				"          eff_end_date = EffEndDate,",
+				"          created_date = CreatedDate,",
+				"          last_updated_date = LastUpdatedDate,",
+				"          actual_sampling_datetime,",
+				"          Day_Nominal,",
+				"          Hour_Nominal,",
+				"          Minute_Nominal",
+				"     )) ~> InsertNewData",
+				"AlterRowUpdate sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['custom_id'],",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          study_name,",
+				"          subject,",
+				"          custom_id,",
+				"          run_id,",
+				"          dilution_factor,",
+				"          visit,",
+				"          actual_sampling_date,",
+				"          actual_sampling_time,",
+				"          actual_sampling_datetime,",
+				"          concentration_ng_ml,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date,",
+				"          Day_Nominal,",
+				"          Hour_Nominal,",
+				"          Minute_Nominal",
+				"     )) ~> UpdateFact"
+			]
+		}
+	}
+}

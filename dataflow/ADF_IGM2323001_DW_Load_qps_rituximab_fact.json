@@ -1,0 +1,223 @@
+{
+	"name": "ADF_IGM2323001_DW_Load_qps_rituximab_fact",
+	"properties": {
+		"description": "Dataflow to implement SCD Type 2 for IGM2323001_ DW_Load_qps_rituximab_fact Table",
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceFact"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "InsertNewData"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "UpdateFact"
+				}
+			],
+			"transformations": [
+				{
+					"name": "deriveDateColumns"
+				},
+				{
+					"name": "selectFact"
+				},
+				{
+					"name": "filterFact"
+				},
+				{
+					"name": "lookupFact"
+				},
+				{
+					"name": "selectColumns"
+				},
+				{
+					"name": "filterNotNullSamples"
+				},
+				{
+					"name": "UpdateDateColumns"
+				},
+				{
+					"name": "AlterRowUpdate"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          study_title as string,",
+				"          subject as string,",
+				"          sample_id as string,",
+				"          time_text as string,",
+				"          analyte as string,",
+				"          concentration as string,",
+				"          concentration_units as string,",
+				"          lloq as string,",
+				"          actual_sampling_date as string,",
+				"          sample_comments as string,",
+				"          file_name as string,",
+				"          load_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceRaw",
+				"source(output(",
+				"          sample_id as string,",
+				"          study_title as string,",
+				"          subject as string,",
+				"          time_text as string,",
+				"          analyte as string,",
+				"          concentration as string,",
+				"          concentration_units as string,",
+				"          lloq as string,",
+				"          actual_sampling_date as date,",
+				"          sample_comments as string,",
+				"          file_name as string,",
+				"          eff_start_date as timestamp,",
+				"          eff_end_date as timestamp,",
+				"          created_date as timestamp,",
+				"          last_updated_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceFact",
+				"sourceRaw derive(eff_start_date = currentUTC('PST'),",
+				"          eff_end_date = toDate('9999-12-31'),",
+				"          created_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST'),",
+				"          actual_sampling_date = toDate(actual_sampling_date, 'dd-MMM-yyyy')) ~> deriveDateColumns",
+				"sourceFact select(mapColumn(",
+				"          tgtsample_id = sample_id,",
+				"          study_title,",
+				"          subject,",
+				"          time_text,",
+				"          analyte,",
+				"          concentration,",
+				"          concentration_units,",
+				"          lloq,",
+				"          actual_sampling_date,",
+				"          sample_comments,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          tgteff_end_date = eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectFact",
+				"selectFact filter(toString(toDate(tgteff_end_date))=='9999-12-31') ~> filterFact",
+				"sourceRaw, filterFact lookup(sample_id == tgtsample_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupFact",
+				"filterNotNullSamples select(mapColumn(",
+				"          sample_id = tgtsample_id,",
+				"          study_title = selectFact@study_title,",
+				"          subject = selectFact@subject,",
+				"          time_text = selectFact@time_text,",
+				"          analyte = selectFact@analyte,",
+				"          concentration = selectFact@concentration,",
+				"          concentration_units = selectFact@concentration_units,",
+				"          lloq = selectFact@lloq,",
+				"          actual_sampling_date = selectFact@actual_sampling_date,",
+				"          sample_comments = selectFact@sample_comments,",
+				"          file_name = selectFact@file_name,",
+				"          eff_start_date,",
+				"          eff_end_date = tgteff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"lookupFact filter(!isNull(tgtsample_id)) ~> filterNotNullSamples",
+				"selectColumns derive(eff_end_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> UpdateDateColumns",
+				"UpdateDateColumns alterRow(updateIf(true())) ~> AlterRowUpdate",
+				"deriveDateColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          sample_id,",
+				"          study_title,",
+				"          subject,",
+				"          time_text,",
+				"          analyte,",
+				"          concentration,",
+				"          concentration_units,",
+				"          lloq,",
+				"          actual_sampling_date,",
+				"          sample_comments,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     )) ~> InsertNewData",
+				"AlterRowUpdate sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['sample_id'],",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          sample_id,",
+				"          study_title,",
+				"          subject,",
+				"          time_text,",
+				"          analyte,",
+				"          concentration,",
+				"          concentration_units,",
+				"          lloq,",
+				"          actual_sampling_date,",
+				"          sample_comments,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     )) ~> UpdateFact"
+			]
+		}
+	}
+}

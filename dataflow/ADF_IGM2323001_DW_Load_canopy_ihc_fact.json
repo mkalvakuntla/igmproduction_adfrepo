@@ -1,0 +1,239 @@
+{
+	"name": "ADF_IGM2323001_DW_Load_canopy_ihc_fact",
+	"properties": {
+		"description": "Dataflow to implement SCD Type 2 for IGM2323001_DW_Load_canopy_ihc_fact Table",
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceFact"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "InsertNewData"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "UpdateFact"
+				}
+			],
+			"transformations": [
+				{
+					"name": "deriveDateColumns"
+				},
+				{
+					"name": "selectFact"
+				},
+				{
+					"name": "filterFact"
+				},
+				{
+					"name": "lookupFact"
+				},
+				{
+					"name": "selectColumns"
+				},
+				{
+					"name": "filterNotNullSlideID"
+				},
+				{
+					"name": "UpdateDateColumns"
+				},
+				{
+					"name": "AlterRowUpdate"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          sr_num as string,",
+				"          slide_id as string,",
+				"          red_l26_percent_1plus as string,",
+				"          red_l26_percent_2plus as string,",
+				"          red_l26_percent_3plus as string,",
+				"          comments_ihc_l26 as string,",
+				"          brown_cd3_percent_1plus as string,",
+				"          brown_cd3_percent_2plus as string,",
+				"          brown_cd3_percent_3plus as string,",
+				"          comments_ihc_cd3 as string,",
+				"          slide_id_h_and_e as string,",
+				"          tumor_percent_h_and_e as string,",
+				"          study_name as string,",
+				"          file_name as string,",
+				"          load_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceRaw",
+				"source(output(",
+				"          study_name as string,",
+				"          sr_num as string,",
+				"          slide_id as string,",
+				"          red_l26_percent_1plus as string,",
+				"          red_l26_percent_2plus as string,",
+				"          red_l26_percent_3plus as string,",
+				"          comments_ihc_l26 as string,",
+				"          brown_cd3_percent_1plus as string,",
+				"          brown_cd3_percent_2plus as string,",
+				"          brown_cd3_percent_3plus as string,",
+				"          comments_ihc_cd3 as string,",
+				"          slide_id_h_and_e as string,",
+				"          tumor_percent_h_and_e as string,",
+				"          file_name as string,",
+				"          eff_start_date as timestamp,",
+				"          eff_end_date as timestamp,",
+				"          created_date as timestamp,",
+				"          last_updated_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceFact",
+				"sourceRaw derive(eff_start_date = currentUTC('PST'),",
+				"          eff_end_date = toDate('9999-12-31'),",
+				"          created_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> deriveDateColumns",
+				"sourceFact select(mapColumn(",
+				"          study_name,",
+				"          sr_num,",
+				"          tgtslide_id = slide_id,",
+				"          red_l26_percent_1plus,",
+				"          red_l26_percent_2plus,",
+				"          red_l26_percent_3plus,",
+				"          comments_ihc_l26,",
+				"          brown_cd3_percent_1plus,",
+				"          brown_cd3_percent_2plus,",
+				"          brown_cd3_percent_3plus,",
+				"          comments_ihc_cd3,",
+				"          tgtslide_id_h_and_e = slide_id_h_and_e,",
+				"          tumor_percent_h_and_e,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectFact",
+				"selectFact filter(toString(toDate(eff_end_date))=='9999-12-31') ~> filterFact",
+				"sourceRaw, filterFact lookup(slide_id_h_and_e == tgtslide_id_h_and_e,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupFact",
+				"filterNotNullSlideID select(mapColumn(",
+				"          study_name = selectFact@study_name,",
+				"          sr_num = selectFact@sr_num,",
+				"          slide_id = tgtslide_id,",
+				"          tumor_percent_h_and_e = selectFact@tumor_percent_h_and_e,",
+				"          red_l26_percent_1plus = selectFact@red_l26_percent_1plus,",
+				"          red_l26_percent_2plus = selectFact@red_l26_percent_2plus,",
+				"          red_l26_percent_3plus = selectFact@red_l26_percent_3plus,",
+				"          comments_ihc_l26 = selectFact@comments_ihc_l26,",
+				"          brown_cd3_percent_1plus = selectFact@brown_cd3_percent_1plus,",
+				"          brown_cd3_percent_2plus = selectFact@brown_cd3_percent_2plus,",
+				"          brown_cd3_percent_3plus = selectFact@brown_cd3_percent_3plus,",
+				"          comments_ihc_cd3 = selectFact@comments_ihc_cd3,",
+				"          slide_id_h_and_e = tgtslide_id_h_and_e,",
+				"          tumor_percent_h_and_e = selectFact@tumor_percent_h_and_e,",
+				"          file_name = selectFact@file_name,",
+				"          eff_start_date,",
+				"          created_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"lookupFact filter(!isNull(tgtslide_id_h_and_e)) ~> filterNotNullSlideID",
+				"selectColumns derive(eff_end_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> UpdateDateColumns",
+				"UpdateDateColumns alterRow(updateIf(true())) ~> AlterRowUpdate",
+				"deriveDateColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          study_name,",
+				"          sr_num,",
+				"          slide_id,",
+				"          red_l26_percent_1plus,",
+				"          red_l26_percent_2plus,",
+				"          red_l26_percent_3plus,",
+				"          comments_ihc_l26,",
+				"          brown_cd3_percent_1plus,",
+				"          brown_cd3_percent_2plus,",
+				"          brown_cd3_percent_3plus,",
+				"          comments_ihc_cd3,",
+				"          slide_id_h_and_e,",
+				"          tumor_percent_h_and_e,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     )) ~> InsertNewData",
+				"AlterRowUpdate sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['slide_id_h_and_e'],",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          study_name,",
+				"          sr_num,",
+				"          slide_id,",
+				"          red_l26_percent_1plus,",
+				"          red_l26_percent_2plus,",
+				"          red_l26_percent_3plus,",
+				"          comments_ihc_l26,",
+				"          brown_cd3_percent_1plus,",
+				"          brown_cd3_percent_2plus,",
+				"          brown_cd3_percent_3plus,",
+				"          comments_ihc_cd3,",
+				"          slide_id_h_and_e,",
+				"          tumor_percent_h_and_e,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     )) ~> UpdateFact"
+			]
+		}
+	}
+}

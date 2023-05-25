@@ -1,0 +1,71 @@
+{
+	"name": "IGM_DW_Load_Q2S_RAW_SQL_Pool",
+	"properties": {
+		"description": "load q2s data to sql pool raw and hist table",
+		"activities": [
+			{
+				"name": "Load_CRO_Table",
+				"description": "Load_CRO_Table",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Users/amartis-a@igmbio.com/Load_CRO_Data_Synapse_SQL_Pool",
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"tableName": {
+							"value": "@pipeline().parameters.tableName",
+							"type": "Expression"
+						},
+						"tableSchema": {
+							"value": "@pipeline().parameters.tableSchema",
+							"type": "Expression"
+						},
+						"history": {
+							"value": "@pipeline().parameters.history",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"sftp_dir_name": {
+				"type": "string",
+				"defaultValue": "q2s"
+			},
+			"tableName": {
+				"type": "string",
+				"defaultValue": "q2_solutions_raw"
+			},
+			"tableSchema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"history": {
+				"type": "string",
+				"defaultValue": "yes"
+			}
+		},
+		"folder": {
+			"name": "CRO_Data_To_Synapse_SQL_Pool"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-05-17T13:24:17Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

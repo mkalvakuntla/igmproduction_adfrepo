@@ -1,0 +1,294 @@
+{
+	"name": "IGM_DW_ADBS_Start_Cluster_todelete",
+	"properties": {
+		"description": "This pipeline starts the databricks cluster and checks if it is running or not then executes the pipelines.",
+		"activities": [
+			{
+				"name": "Web Post Start Cluster",
+				"description": "This activity starts the databricks cluster",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(pipeline().parameters.adbs_url,'start')",
+						"type": "Expression"
+					},
+					"connectVia": {
+						"referenceName": "IGMCROSynapseIR",
+						"type": "IntegrationRuntimeReference"
+					},
+					"method": "POST",
+					"headers": {
+						"Authorization": "Bearer dapi191c24366875fcf8473286eccc593746"
+					},
+					"body": {
+						"value": "@pipeline().parameters.api_data",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Until Cluster State",
+				"description": "This activity runs until the state of cluster is Running",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "Set variable Cluster State",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('cluster_state'),'RUNNING' )",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Web Get Cluster_State",
+							"description": "This web activity get the cluster state",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(pipeline().parameters.adbs_url,'get')",
+									"type": "Expression"
+								},
+								"method": "POST",
+								"headers": {
+									"Authorization": "Bearer dapi191c24366875fcf8473286eccc593746"
+								},
+								"body": {
+									"value": "@pipeline().parameters.api_data",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "Set Cluster State",
+							"description": "This activity set the current state of the cluster",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "Web Get Cluster_State",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "cluster_state",
+								"value": {
+									"value": "@activity('Web Get Cluster_State').output.state",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "If Condition Cluster STate",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Set Cluster State",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@equals(variables('cluster_state'),'RUNNING' )",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "Wait_30s",
+										"description": "Wait for 30 secs",
+										"type": "Wait",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"waitTimeInSeconds": 30
+										}
+									}
+								]
+							}
+						}
+					],
+					"timeout": "7.00:00:00"
+				}
+			},
+			{
+				"name": "Set variable Cluster State",
+				"description": "This activity set the variable state as not started/stopped",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Web Post Start Cluster",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "cluster_state",
+					"value": "stopped"
+				}
+			},
+			{
+				"name": "Send Email Notifications",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Until Cluster State",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "SendEmailNotifications",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"EmailTo": {
+							"value": "@pipeline().parameters.pEmailTo",
+							"type": "Expression"
+						},
+						"CC": {
+							"value": "@pipeline().parameters.pCC",
+							"type": "Expression"
+						},
+						"URL": {
+							"value": "@concat('All,<br/><br/>This is an automated notification.<br/><br/>The state of cluster is: ',variables('cluster_state'),'<br/><br/>Thanks<br/>')",
+							"type": "Expression"
+						},
+						"Bcc": {
+							"value": "@pipeline().parameters.pBcc",
+							"type": "Expression"
+						},
+						"Subject": {
+							"value": "@pipeline().parameters.pSubject",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "If Condition -Cluster State",
+				"description": "If the cluster state is running then run AD user pipelines.",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Send Email Notifications",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('cluster_state'),'RUNNING' )",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Execute IGM_AzureAD_SignIns",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IGM_AzureAD_SignIns",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						},
+						{
+							"name": "Execute IGM_Temp_Users",
+							"type": "ExecutePipeline",
+							"dependsOn": [
+								{
+									"activity": "Execute IGM_AzureAD_SignIns",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "IGM_Temp_Users",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"adbs_url": {
+				"type": "string",
+				"defaultValue": "https://adb-1274513184824317.17.azuredatabricks.net/api/2.0/clusters/"
+			},
+			"api_data": {
+				"type": "string",
+				"defaultValue": {
+					"cluster_id": "1220-144603-h5pbz4c"
+				}
+			},
+			"pEmailTo": {
+				"type": "string",
+				"defaultValue": "uparab@igmbio.com"
+			},
+			"pCC": {
+				"type": "string",
+				"defaultValue": "mchenna@celitotech.com"
+			},
+			"pBcc": {
+				"type": "string",
+				"defaultValue": "uparab@igmbio.com,mkalvakuntla@igmbio.com"
+			},
+			"pSubject": {
+				"type": "string",
+				"defaultValue": "IGM : Azure- AD Cluster State Notification"
+			}
+		},
+		"variables": {
+			"cluster_state": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-02-01T04:22:41Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

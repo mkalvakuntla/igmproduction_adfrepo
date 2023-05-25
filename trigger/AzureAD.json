@@ -1,0 +1,26 @@
+{
+	"name": "AzureAD",
+	"properties": {
+		"description": "Run Azure AD Graph API at midnight",
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Day",
+				"interval": 1,
+				"startTime": "2021-12-17T00:01:00",
+				"timeZone": "Pacific Standard Time",
+				"schedule": {
+					"minutes": [
+						35
+					],
+					"hours": [
+						0
+					]
+				}
+			}
+		}
+	}
+}

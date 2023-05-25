@@ -1,0 +1,129 @@
+{
+	"name": "IGM_DW_Load_Demographics_DM_RAW_SQL_Pool",
+	"properties": {
+		"description": "load DM data to sql pool raw and hist table",
+		"activities": [
+			{
+				"name": "Load_CRO_Table",
+				"description": "Load_CRO_Table",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Users/amartis-a@igmbio.com/Load_CRO_Data_Synapse_SQL_Pool",
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"tableName": {
+							"value": "@pipeline().parameters.tableName",
+							"type": "Expression"
+						},
+						"tableSchema": {
+							"value": "@pipeline().parameters.tableSchema",
+							"type": "Expression"
+						},
+						"history": {
+							"value": "@pipeline().parameters.history",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Load_CRO_Table",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "SendEmailNotifications",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"EmailTo": {
+							"value": "@pipeline().parameters.pEmailTo",
+							"type": "Expression"
+						},
+						"CC": {
+							"value": "@pipeline().parameters.pCC",
+							"type": "Expression"
+						},
+						"URL": {
+							"value": "@concat('All,<br/><br/>This is an automated notification.<br/><br/>PFB the run and exception details.<br/>Run Output: ',activity('Load_CRO_Table').output.runOutput,'<br/><br/>For more details please follow the link below:<br/><a href=\"',activity('Load_CRO_Table').output.runPageUrl,'\">ADBS Run URL</a><br/><br/>Thanks,<br/>Raymond')",
+							"type": "Expression"
+						},
+						"Bcc": {
+							"value": "@pipeline().parameters.pBcc",
+							"type": "Expression"
+						},
+						"Subject": {
+							"value": "@pipeline().parameters.pSubject",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"sftp_dir_name": {
+				"type": "string",
+				"defaultValue": "IGM-2323-001/Medidata/dm"
+			},
+			"tableName": {
+				"type": "string",
+				"defaultValue": "demographics_raw"
+			},
+			"tableSchema": {
+				"type": "string",
+				"defaultValue": "dbo"
+			},
+			"history": {
+				"type": "string",
+				"defaultValue": "yes"
+			},
+			"pEmailTo": {
+				"type": "string",
+				"defaultValue": "rchan@igmbio.com"
+			},
+			"pCC": {
+				"type": "string",
+				"defaultValue": "rchan@igmbio.com"
+			},
+			"pBcc": {
+				"type": "string",
+				"defaultValue": "rchan@igmbio.com"
+			},
+			"pSubject": {
+				"type": "string",
+				"defaultValue": "CRO- Demographic Run Details"
+			}
+		},
+		"folder": {
+			"name": "CRO_Data_To_Synapse_SQL_Pool"
+		},
+		"annotations": [],
+		"lastPublishTime": "2022-05-17T13:24:17Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

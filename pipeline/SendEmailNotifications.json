@@ -1,0 +1,58 @@
+{
+	"name": "SendEmailNotifications",
+	"properties": {
+		"activities": [
+			{
+				"name": "SendEmail",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://igmsendemail.azurewebsites.net:443/api/SendEMail/triggers/manual/invoke?api-version=2022-05-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=zfapxJrHuT0Re0mbYmsYcEJjxOWbv2jgMd6wPhT_3fQ",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"body": {
+						"EmailTo": "@pipeline().parameters.EmailTo",
+						"CC": "@pipeline().parameters.CC",
+						"Body": "@pipeline().parameters.URL",
+						"Bcc": "@pipeline().parameters.Bcc",
+						"Subject": "@pipeline().parameters.Subject"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"EmailTo": {
+				"type": "string",
+				"defaultValue": "mkalvakuntla@igmbio.com"
+			},
+			"CC": {
+				"type": "string"
+			},
+			"URL": {
+				"type": "string"
+			},
+			"Bcc": {
+				"type": "string"
+			},
+			"Subject": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "IGM_CRO_Synapse"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-02-02T12:35:21Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

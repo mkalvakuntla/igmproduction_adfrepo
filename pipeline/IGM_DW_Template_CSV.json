@@ -1,0 +1,141 @@
+{
+	"name": "IGM_DW_Template_CSV",
+	"properties": {
+		"description": "Template for loading csv files from blob to mysql",
+		"activities": [
+			{
+				"name": "Get_File",
+				"description": "Get the file from the blob folder",
+				"type": "GetMetadata",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "DS_ABLB_CSV",
+						"type": "DatasetReference",
+						"parameters": {
+							"pFolderName_CSV": {
+								"value": "@concat(pipeline().parameters.blob_folder_name,'/Inbound')",
+								"type": "Expression"
+							},
+							"pFileName_CSV": {
+								"value": "@variables('filename')",
+								"type": "Expression"
+							}
+						}
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true
+					},
+					"formatSettings": {
+						"type": "DelimitedTextReadSettings"
+					}
+				}
+			},
+			{
+				"name": "Set FileName",
+				"description": "Set filename variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get_File",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "filename",
+					"value": {
+						"value": "@activity('Get_File').output.childItems[0].name",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Load_Template_CSV",
+				"description": "Call ADBS notebook to load csv file to synapse",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set FileName",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": "/Users/amartis-a@igmbio.com/Load_CSV_Files",
+					"baseParameters": {
+						"blob_folder_name": {
+							"value": "@pipeline().parameters.blob_folder_name",
+							"type": "Expression"
+						},
+						"filename": {
+							"value": "@variables('filename')",
+							"type": "Expression"
+						},
+						"history": {
+							"value": "@pipeline().parameters.history",
+							"type": "Expression"
+						},
+						"tableName": {
+							"value": "@pipeline().parameters.tableName",
+							"type": "Expression"
+						},
+						"tableSchema": {
+							"value": "@pipeline().parameters.tableSchema",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"blob_folder_name": {
+				"type": "string"
+			},
+			"tableSchema": {
+				"type": "string"
+			},
+			"tableName": {
+				"type": "string"
+			},
+			"history": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"filename": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2021-10-24T21:32:21Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

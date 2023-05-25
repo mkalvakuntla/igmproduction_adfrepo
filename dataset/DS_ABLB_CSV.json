@@ -1,0 +1,39 @@
+{
+	"name": "DS_ABLB_CSV",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "AZLS",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"pFolderName_CSV": {
+				"type": "string"
+			},
+			"pFileName_CSV": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"fileName": {
+					"value": "@dataset().pFileName_CSV",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().pFolderName_CSV",
+					"type": "Expression"
+				},
+				"container": "cro"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

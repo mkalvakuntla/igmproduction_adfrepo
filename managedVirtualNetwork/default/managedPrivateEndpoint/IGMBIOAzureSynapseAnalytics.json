@@ -1,0 +1,10 @@
+{
+	"name": "IGMBIOAzureSynapseAnalytics",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/ebb76e29-27b2-4331-9cf9-256ee6cb17c4/resourceGroups/IGM-CRO/providers/Microsoft.Synapse/workspaces/igm-synapse-production",
+		"groupId": "sql",
+		"fqdns": [
+			"igm-synapse-production.sql.azuresynapse.net"
+		]
+	}
+}

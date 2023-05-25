@@ -1,0 +1,119 @@
+{
+	"name": "ADF_IGM8444001_DW_Load_labcorp_lablink_report_fact",
+	"properties": {
+		"description": "Dataflow to implement SCD Type 2 for Fact Table",
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceRaw"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "InsertNewData"
+				}
+			],
+			"transformations": [
+				{
+					"name": "deriveDateColumns"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          project_number as string,",
+				"          investigator_id as string,",
+				"          patient_id as string,",
+				"          patient_initials as string,",
+				"          screening_number as string,",
+				"          accession_number as string,",
+				"          container_number as string,",
+				"          container_barcode as string,",
+				"          visit_kit_type as string,",
+				"          protocol_visit_code as string,",
+				"          visit_description as string,",
+				"          visit_date_time as string,",
+				"          specimen_collection_date as string,",
+				"          specimen_collection_time as string,",
+				"          receipt_condition as string,",
+				"          container_receipt_date as string,",
+				"          label_line_1 as string,",
+				"          label_line_2 as string,",
+				"          smart_specimen_class as string,",
+				"          smart_specimen_class_description as string,",
+				"          smart_specimen_status as string,",
+				"          smart_current_location as string,",
+				"          smart_parent_location as string,",
+				"          shipped_to_location_organization_name as string,",
+				"          shipped_on_date_time as string,",
+				"          file_name as string,",
+				"          load_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceRaw",
+				"sourceRaw derive(eff_start_date = currentUTC('PST'),",
+				"          eff_end_date = toDate('9999-12-31'),",
+				"          created_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> deriveDateColumns",
+				"deriveDateColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     truncate:true,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          project_number,",
+				"          investigator_id,",
+				"          patient_id,",
+				"          patient_initials,",
+				"          screening_number,",
+				"          accession_number,",
+				"          container_number,",
+				"          container_barcode,",
+				"          visit_kit_type,",
+				"          protocol_visit_code,",
+				"          visit_description,",
+				"          visit_date_time,",
+				"          specimen_collection_date,",
+				"          specimen_collection_time,",
+				"          receipt_condition,",
+				"          container_receipt_date,",
+				"          label_line_1,",
+				"          label_line_2,",
+				"          smart_specimen_class,",
+				"          smart_specimen_class_description,",
+				"          smart_specimen_status,",
+				"          smart_current_location,",
+				"          smart_parent_location,",
+				"          shipped_to_location_organization_name,",
+				"          shipped_on_date_time,",
+				"          file_name,",
+				"          load_date,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     )) ~> InsertNewData"
+			]
+		}
+	}
+}

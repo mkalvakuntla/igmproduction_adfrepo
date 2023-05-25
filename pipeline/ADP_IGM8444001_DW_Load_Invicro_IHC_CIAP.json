@@ -1,0 +1,563 @@
+{
+	"name": "ADP_IGM8444001_DW_Load_Invicro_IHC_CIAP",
+	"properties": {
+		"activities": [
+			{
+				"name": "ADBS_Load_Raw_Hist",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "ADBS_CRO_SFTP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_load_raw_hist",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"tableSchema": "dbo",
+						"tableName": {
+							"value": "@replace(pipeline().parameters.srcCIAPTableName,'_ciap_new_igm36_raw','')",
+							"type": "Expression"
+						},
+						"history": {
+							"value": "@pipeline().parameters.history",
+							"type": "Expression"
+						},
+						"sheet_name": {
+							"value": "@pipeline().parameters.sheet_name",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set CRO SFTP Error Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ADBS_CRO_SFTP",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": {
+						"value": "@concat('<br>Error Details: ',activity('ADBS_CRO_SFTP').output.runError,'<br>Notebook URL:',activity('ADBS_CRO_SFTP').output.runPageUrl)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Load Raw Hist Error Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "ADBS_Load_Raw_Hist",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": {
+						"value": "@concat('<br>Error Details: ',activity('ADBS_Load_Raw_Hist').output.runError,'<br>Notebook URL:',activity('ADBS_Load_Raw_Hist').output.runPageUrl)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "ADBS_CRO_SFTP",
+				"type": "DatabricksNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_cro_sftp",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"sftp_dir_name": {
+							"value": "@pipeline().parameters.sftp_dir_name",
+							"type": "Expression"
+						},
+						"filename": {
+							"value": "@pipeline().parameters.sftp_filename",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification CC3DR5 CIAP SFTP",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set CRO SFTP Error Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification Raw CC3DR5 CIAP  Hist",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Load Raw Hist Error Variable",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "DF IHC CIAP fact",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "ADBS_Load_Raw_Hist",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "ADF_IGM8444001_DW_Load_Invicro_IHC_CIAP_fact",
+						"type": "DataFlowReference",
+						"datasetParameters": {
+							"sourceFact": {
+								"tableName": {
+									"value": "@pipeline().parameters.tgtCIAPTableName",
+									"type": "Expression"
+								}
+							},
+							"sourceRaw": {
+								"tableName": {
+									"value": "@pipeline().parameters.srcCIAPTableName",
+									"type": "Expression"
+								}
+							},
+							"UpdateFact": {
+								"tableName": {
+									"value": "@pipeline().parameters.tgtCIAPTableName",
+									"type": "Expression"
+								}
+							},
+							"InsertNewData": {
+								"tableName": {
+									"value": "@pipeline().parameters.tgtCIAPTableName",
+									"type": "Expression"
+								}
+							}
+						}
+					},
+					"staging": {
+						"linkedService": {
+							"referenceName": "LS_Staging_Storage",
+							"type": "LinkedServiceReference"
+						},
+						"folderPath": "igmsynapsefilesysprod/Staging"
+					},
+					"integrationRuntime": {
+						"referenceName": "IGMCROSynapseIR",
+						"type": "IntegrationRuntimeReference"
+					},
+					"traceLevel": "Fine",
+					"sourceStagingConcurrency": 1
+				}
+			},
+			{
+				"name": "Send Email Notification Raw CIAP Hist1",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Fact Validation CIAP Success",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Send Email Notification Raw CIAP Hist",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Dataflow CIAP Failure",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set Dataflow CIAP Success",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "DF IHC CIAP fact",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": "Success"
+				}
+			},
+			{
+				"name": "Set Dataflow CIAP Failure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "DF IHC CIAP fact",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": "Failed"
+				}
+			},
+			{
+				"name": "Fact Validation_CIAP",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Dataflow CIAP Success",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_fact_validation",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"uniqueKey": {
+							"value": "@pipeline().parameters.uniqueKey",
+							"type": "Expression"
+						},
+						"tgtTableName": {
+							"value": "@pipeline().parameters.tgtCIAPTableName",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set Fact Validation CIAP Success",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Fact Validation_CIAP",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": "Success"
+				}
+			},
+			{
+				"name": "Set Fact Validation CIAP Failure",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Fact Validation_CIAP",
+						"dependencyConditions": [
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "run_details",
+					"value": "Failure"
+				}
+			},
+			{
+				"name": "Send Email Notification Raw CIAP Hist2",
+				"type": "DatabricksNotebook",
+				"dependsOn": [
+					{
+						"activity": "Set Fact Validation CIAP Failure",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebookPath": {
+						"value": "@pipeline().parameters.adbs_send_mail",
+						"type": "Expression"
+					},
+					"baseParameters": {
+						"run_details": {
+							"value": "@variables('run_details')",
+							"type": "Expression"
+						},
+						"subject": {
+							"value": "@concat('Pipeline Run Details for: ',pipeline().Pipeline)",
+							"type": "Expression"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AzureDatabricks",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"sftp_dir_name": {
+				"type": "string",
+				"defaultValue": "IGM-8444-001/Invicro/IHC"
+			},
+			"adbs_cro_sftp": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/ADBS_IGM_CRO_SFTP_DBFS"
+			},
+			"adbs_file_validation": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/ADBS_IGM_CRO_File_Validation"
+			},
+			"adbs_load_raw_hist": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/ADBS_Load_CRO_8444_001_Invicro_IHC_CIAP_Raw_Hist"
+			},
+			"history": {
+				"type": "string",
+				"defaultValue": "yes"
+			},
+			"adbs_send_mail": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/SendEmail"
+			},
+			"sftp_filename": {
+				"type": "string",
+				"defaultValue": "IGM77_cIAP_Cohort_1_Scoresheet"
+			},
+			"uniqueKey": {
+				"type": "string",
+				"defaultValue": "patient_id,specimen_id"
+			},
+			"adbs_fact_validation": {
+				"type": "string",
+				"defaultValue": "/Shared/IGM_CRO_Scipts/ADBS_IGM_CRO_Fact_Validation"
+			},
+			"sheet_name": {
+				"type": "string",
+				"defaultValue": "Table1"
+			},
+			"srcCIAPTableName": {
+				"type": "string",
+				"defaultValue": "igm8444001_invicro_ihc_ciap_new_igm36_raw"
+			},
+			"tgtCIAPTableName": {
+				"type": "string",
+				"defaultValue": "igm8444001_invicro_ihc_ciap_new_igm36_fact"
+			}
+		},
+		"variables": {
+			"run_details": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "IGM_CRO_Synapse"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-03-21T13:04:15Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

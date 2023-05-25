@@ -1,0 +1,230 @@
+{
+	"name": "ADF_IGM2323001_DW_Load_bioagilytix_ada_fact",
+	"properties": {
+		"description": "Dataflow to implement SCD Type 2 for BioAgilytix ADA Fact Table",
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "sourceFact"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "InsertNewData"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_AzureSQL",
+						"type": "DatasetReference"
+					},
+					"name": "UpdateFact"
+				}
+			],
+			"transformations": [
+				{
+					"name": "deriveDateColumns"
+				},
+				{
+					"name": "selectFact"
+				},
+				{
+					"name": "filterFact"
+				},
+				{
+					"name": "lookupFact"
+				},
+				{
+					"name": "selectColumns"
+				},
+				{
+					"name": "filterNotNullBarcode"
+				},
+				{
+					"name": "UpdateDateColumns"
+				},
+				{
+					"name": "AlterRowUpdate"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          clinical_study_id as string,",
+				"          subject_id as string,",
+				"          visit as string,",
+				"          sampling_date as string,",
+				"          sampling_time as string,",
+				"          barcode as string,",
+				"          screening_result as string,",
+				"          confirmatory_result_igm_2323 as string,",
+				"          confirmatory_result_igm_153_j as string,",
+				"          titration_result as string,",
+				"          evaluation as string,",
+				"          file_name as string,",
+				"          load_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceRaw",
+				"source(output(",
+				"          clinical_study_id as string,",
+				"          subject_id as string,",
+				"          visit as string,",
+				"          sampling_date as date,",
+				"          sampling_time as string,",
+				"          sampling_date_time as timestamp,",
+				"          barcode as string,",
+				"          screening_result as string,",
+				"          confirmatory_result_igm_2323 as string,",
+				"          confirmatory_result_igm_153_j as string,",
+				"          titration_result as string,",
+				"          evaluation as string,",
+				"          file_name as string,",
+				"          eff_start_date as timestamp,",
+				"          eff_end_date as timestamp,",
+				"          created_date as timestamp,",
+				"          last_updated_date as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table',",
+				"     staged: true) ~> sourceFact",
+				"sourceRaw derive(eff_start_date = currentUTC('PST'),",
+				"          eff_end_date = toDate('9999-12-31'),",
+				"          created_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST'),",
+				"          new_sampling_date = toDate(sampling_date, 'yyyy-M-dd'),",
+				"          sampling_date_time = toTimestamp(substring(sampling_date,0,11)+' '+sampling_time,'yyyy-MM-dd HH:mm:ss')) ~> deriveDateColumns",
+				"sourceFact select(mapColumn(",
+				"          clinical_study_id,",
+				"          subject_id,",
+				"          visit,",
+				"          sampling_date,",
+				"          sampling_time,",
+				"          sampling_date_time,",
+				"          tgtbarcode = barcode,",
+				"          screening_result,",
+				"          confirmatory_result_igm_2323,",
+				"          confirmatory_result_igm_153_j,",
+				"          titration_result,",
+				"          evaluation,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          tgteff_end_date = eff_end_date,",
+				"          created_date,",
+				"          last_updated_date",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectFact",
+				"selectFact filter(toString(toDate(tgteff_end_date))=='9999-12-31') ~> filterFact",
+				"sourceRaw, filterFact lookup(barcode == tgtbarcode,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookupFact",
+				"filterNotNullBarcode select(mapColumn(",
+				"          clinical_study_id = selectFact@clinical_study_id,",
+				"          subject_id = selectFact@subject_id,",
+				"          visit = selectFact@visit,",
+				"          sampling_date = selectFact@sampling_date,",
+				"          sampling_time = selectFact@sampling_time,",
+				"          barcode = tgtbarcode,",
+				"          screening_result = selectFact@screening_result,",
+				"          confirmatory_result_igm_2323 = selectFact@confirmatory_result_igm_2323,",
+				"          confirmatory_result_igm_153_j = selectFact@confirmatory_result_igm_153_j,",
+				"          titration_result = selectFact@titration_result,",
+				"          evaluation = selectFact@evaluation,",
+				"          file_name = selectFact@file_name,",
+				"          sampling_date_time",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectColumns",
+				"lookupFact filter(!isNull(tgtbarcode)) ~> filterNotNullBarcode",
+				"selectColumns derive(eff_end_date = currentUTC('PST'),",
+				"          last_updated_date = currentUTC('PST')) ~> UpdateDateColumns",
+				"UpdateDateColumns alterRow(updateIf(true())) ~> AlterRowUpdate",
+				"deriveDateColumns sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 2,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          clinical_study_id,",
+				"          subject_id,",
+				"          visit,",
+				"          sampling_date = new_sampling_date,",
+				"          sampling_time,",
+				"          barcode,",
+				"          screening_result,",
+				"          confirmatory_result_igm_2323,",
+				"          confirmatory_result_igm_153_j,",
+				"          titration_result,",
+				"          evaluation,",
+				"          file_name,",
+				"          eff_start_date,",
+				"          eff_end_date,",
+				"          created_date,",
+				"          last_updated_date,",
+				"          sampling_date_time",
+				"     )) ~> InsertNewData",
+				"AlterRowUpdate sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     deletable:false,",
+				"     insertable:false,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     keys:['barcode'],",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     saveOrder: 1,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          clinical_study_id,",
+				"          subject_id,",
+				"          visit,",
+				"          sampling_date,",
+				"          sampling_time,",
+				"          barcode,",
+				"          screening_result,",
+				"          confirmatory_result_igm_2323,",
+				"          confirmatory_result_igm_153_j,",
+				"          titration_result,",
+				"          evaluation,",
+				"          eff_end_date,",
+				"          last_updated_date,",
+				"          visit,",
+				"          sampling_date_time,",
+				"          eff_end_date",
+				"     )) ~> UpdateFact"
+			]
+		}
+	}
+}
